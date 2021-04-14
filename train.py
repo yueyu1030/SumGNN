@@ -30,7 +30,6 @@ def main(params):
                             num_neg_samples_per_link=params.num_neg_samples_per_link,
                             use_kge_embeddings=params.use_kge_embeddings, dataset=params.dataset,
                             kge_model=params.kge_model, file_name=params.train_file)
-    print(train.graph)
     #assert 0
     valid = SubgraphDataset(params.db_path, 'valid_pos', 'valid_neg', params.file_paths,
                             add_traspose_rels=params.add_traspose_rels,
@@ -49,7 +48,7 @@ def main(params):
     params.num_rels = train.num_rels
     params.aug_num_rels = train.aug_num_rels
     params.inp_dim = train.n_feat_dim
-    params.train_rels = 200 if params.dataset == 'ddi2' else params.num_rels
+    params.train_rels = 200 if params.dataset == 'BioSNAP' else params.num_rels
     params.num_nodes = 35000
 
     # Log the max label value to save it in the model. This will be used to cap the labels generated on test set.
@@ -58,7 +57,7 @@ def main(params):
     logging.info(f"Input dim : {params.inp_dim}, # Relations : {params.num_rels}, # Augmented relations : {params.aug_num_rels}")
 
     graph_classifier = initialize_model(params, dgl_model, params.load_model)
-    if params.dataset == 'ddi':
+    if params.dataset == 'drugbank':
         if params.feat == 'morgan':
             import pickle 
             with open('data/{}/DB_molecular_feats.pkl'.format(params.dataset), 'rb') as f:
@@ -73,7 +72,7 @@ def main(params):
         elif  params.feat == 'pretrained':
             mfeat = np.loadtxt('data/{}/pretrained.txt'.format(params.dataset))
             params.feat_dim = 200
-    elif params.dataset == 'ddi2':
+    elif params.dataset == 'BioSNAP':
         mfeat = []
         rfeat = []
         import pickle 
@@ -88,15 +87,14 @@ def main(params):
 
     graph_classifier.drug_feat(torch.FloatTensor(np.array(mfeat)).to(params.device))
     
-    valid_evaluator = Evaluator(params, graph_classifier, valid) if params.dataset == 'ddi' else Evaluator_ddi2(params, graph_classifier, valid)
-    test_evaluator = Evaluator(params, graph_classifier, test) if params.dataset == 'ddi' else Evaluator_ddi2(params, graph_classifier, test)
-    train_evaluator = Evaluator(params, graph_classifier, train) if params.dataset == 'ddi' else Evaluator_ddi2(params, graph_classifier, valid)
+    valid_evaluator = Evaluator(params, graph_classifier, valid) if params.dataset == 'drugbank' else Evaluator_ddi2(params, graph_classifier, valid)
+    test_evaluator = Evaluator(params, graph_classifier, test) if params.dataset == 'drugbank' else Evaluator_ddi2(params, graph_classifier, test)
+    train_evaluator = Evaluator(params, graph_classifier, train) if params.dataset == 'drugbank' else Evaluator_ddi2(params, graph_classifier, valid)
     
     trainer = Trainer(params, graph_classifier, train, train_evaluator, valid_evaluator,test_evaluator)
 
     logging.info('Starting training with full batch...')
-    trainer.case_study()
-    #trainer.train()
+    trainer.train()
 
 
 
@@ -142,8 +140,6 @@ if __name__ == '__main__':
                         help="Maximum gradient norm allowed")
     parser.add_argument("--l2", type=float, default=1e-5,
                         help="Regularization constant for GNN weights")
-    parser.add_argument("--margin", type=float, default=10,
-                        help="The margin between positive and negative samples in the max-margin loss")
 
     # Data processing pipeline params
     parser.add_argument("--max_links", type=int, default=250000,
@@ -191,23 +187,21 @@ if __name__ == '__main__':
     parser.add_argument('--add_ht_emb', '-ht', type=bool, default=True,
                         help='whether to concatenate head/tail embedding with pooled graph representation')
     parser.add_argument('--add_sb_emb', '-sb', type=bool, default=True,
-                        help='whether to concatenate head/tail embedding with pooled graph representation')
+                        help='whether to concatenate subgraph embedding with pooled graph representation')
     parser.add_argument('--has_attn', '-attn', type=bool, default=True,
                         help='whether to have attn in model or not')
     parser.add_argument('--has_kg', '-kg', type=bool, default=True,
                         help='whether to have kg in model or not')
     parser.add_argument('--feat', '-f', type=str, default='morgan',
-                        help='whether to have attn in model or not')
+                        help='the type of the feature we use in molecule modeling')
     parser.add_argument('--feat_dim', type=int, default=1024,
-                        help='whether to have attn in model or not')
+                        help='the dimension of the feature')
     parser.add_argument('--add_feat_emb', '-feat', type=bool, default=True,
-                        help='whether to have attn in model or not')
+                        help='whether to morgan feature embedding in model or not')
     parser.add_argument('--add_transe_emb', type=bool, default=True,
-                        help='whether to have attn in model or not')
-    parser.add_argument('--one_attn', type=bool, default=False,
-                        help='whether to have attn in model or not')
+                        help='whether to have knowledge graph embedding in model or not')
     parser.add_argument('--gamma', type=float, default=0.2,
-                        help='whether to have attn in model or not')
+                        help='The threshold for attention')
     params = parser.parse_args()
     initialize_experiment(params, __file__)
 
@@ -223,6 +217,6 @@ if __name__ == '__main__':
         params.device = torch.device('cpu')
 
     params.collate_fn = collate_dgl
-    params.move_batch_to_device = move_batch_to_device_dgl if params.dataset == 'ddi' else move_batch_to_device_dgl_ddi2
+    params.move_batch_to_device = move_batch_to_device_dgl if params.dataset == 'drugbank' else move_batch_to_device_dgl_ddi2
 
     main(params)

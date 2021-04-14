@@ -35,10 +35,9 @@ class Trainer():
         if params.optimizer == "Adam":
             self.optimizer = optim.Adam(model_params, lr=params.lr, weight_decay=self.params.l2)
 
-        # self.criterion = nn.MarginRankingLoss(self.params.margin, reduction='sum')
-        if params.dataset == 'ddi':
+        if params.dataset == 'drugbank':
             self.criterion = nn.CrossEntropyLoss()
-        elif params.dataset == 'ddi2':
+        elif params.dataset == 'BioSNAP':
             self.criterion = nn.BCELoss(reduce=False) 
         self.reset_training_state()
 
@@ -64,22 +63,16 @@ class Trainer():
             #data_pos, targets_pos, data_neg, targets_neg = self.params.move_batch_to_device(batch, self.params.device)
             data_pos, r_labels_pos, targets_pos = self.params.move_batch_to_device(batch, self.params.device)
             
-            #try:
             self.optimizer.zero_grad()
             score_pos = self.graph_classifier(data_pos)
-            #score_neg = self.graph_classifier(data_neg)
-            #loss = self.criterion(score_pos, score_pos, torch.Tensor([1]).to(device=self.params.device))
-            if self.params.dataset == 'ddi':
+            if self.params.dataset == 'drugbank':
                 loss = self.criterion(score_pos, r_labels_pos)
-            elif self.params.dataset == 'ddi2':
+            elif self.params.dataset == 'BioSNAP':
                 m = nn.Sigmoid()
                 score_pos = m(score_pos)
                 targets_pos = targets_pos.unsqueeze(1)
-                #print(score_pos.shape, r_labels_pos.shape)
                 loss_train = self.criterion(score_pos, r_labels_pos * targets_pos)
-                loss = torch.sum(loss_train * r_labels_pos)
-            # print(score_pos, score_neg, loss)
-            
+                loss = torch.sum(loss_train * r_labels_pos)            
             loss.backward()
             clip_grad_norm_(self.graph_classifier.parameters(), max_norm=10, norm_type=2)
             self.optimizer.step()
@@ -91,10 +84,8 @@ class Trainer():
             #    print('-------runtime error--------')
             #    continue
             with torch.no_grad():
-                # all_scores += score_pos.squeeze().detach().cpu().tolist() #+ score_neg.squeeze().detach().cpu().tolist()
-                # all_labels += targets_pos.tolist() #+ targets_neg.tolist()
                 total_loss += loss.item()
-                if self.params.dataset != 'ddi2':
+                if self.params.dataset != 'BioSNAP':
                     
                     label_ids = r_labels_pos.to('cpu').numpy()
                     all_labels += label_ids.flatten().tolist()
@@ -111,7 +102,7 @@ class Trainer():
                     self.save_classifier()
                     self.best_metric = result['auc']
                     self.not_improved_count = 0
-                    if self.params.dataset != 'ddi2':
+                    if self.params.dataset != 'BioSNAP':
                         logging.info('\033[93m Test Performance Per Class:' + str(save_test_data) + 'in ' + str(time.time() - tic)+'\033[0m')
                     else:
                         with open('experiments/%s/result.json'%(self.params.experiment_name), 'a') as f:
@@ -124,7 +115,7 @@ class Trainer():
                         break
                 self.last_metric = result['auc']
         weight_norm = sum(map(lambda x: torch.norm(x), model_params))
-        if self.params.dataset != 'ddi2':
+        if self.params.dataset != 'BioSNAP':
             auc = metrics.f1_score(all_labels, all_scores, average='macro')
             auc_pr = metrics.f1_score(all_labels, all_scores, average='micro')
 
@@ -140,10 +131,6 @@ class Trainer():
             
             loss, auc, auc_pr, weight_norm = self.train_epoch()
 
-            # loss = 0
-            # auc = 0
-            # auc_pr = 0
-            # weight_norm = 0
             time_elapsed = time.time() - time_start
             logging.info(f'Epoch {epoch} with loss: {loss}, training auc: {auc}, training auc_pr: {auc_pr}, best validation AUC: {self.best_metric}, weight_norm: {weight_norm} in {time_elapsed}')
 
@@ -169,8 +156,7 @@ class Trainer():
     def case_study(self):
         self.reset_training_state()
         test_result, save_test_data = self.test_evaluator.print_result()
-        # test_result, save_test_data = self.train_evaluator.print_attn_weight()
-        # test_result, save_test_data = self.test_evaluator.print_attn_weight()
+
     def save_classifier(self):
         torch.save(self.graph_classifier, os.path.join(self.params.exp_dir, 'best_graph_classifier.pth'))  # Does it overwrite or fuck with the existing file?
         logging.info('Better models found w.r.t accuracy. Saved it!')

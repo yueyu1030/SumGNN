@@ -19,7 +19,7 @@ def generate_subgraph_datasets(params, splits=['train', 'valid', 'test'], saved_
     #adj_list, triplets, entity2id, relation2id, id2entity, id2relation, rel = process_files(params.file_paths, saved_relation2id)
     
     triple_file = 'data/{}/relations_2hop.txt'.format(params.dataset)
-    if params.dataset == 'ddi':
+    if params.dataset == 'drugbank':
         adj_list, triplets, entity2id, relation2id, id2entity, id2relation, rel = process_files_ddi(params.file_paths, triple_file, saved_relation2id)
     else:
         adj_list, triplets, entity2id, relation2id, id2entity, id2relation, rel, triplets_mr, polarity_mr = process_files_decagon(params.file_paths, triple_file, saved_relation2id)
@@ -33,9 +33,9 @@ def generate_subgraph_datasets(params, splits=['train', 'valid', 'test'], saved_
     graphs = {}
 
     for split_name in splits:
-        if params.dataset == 'ddi':
+        if params.dataset == 'drugbank':
             graphs[split_name] = {'triplets': triplets[split_name], 'max_size': params.max_links}
-        elif params.dataset == 'ddi2':
+        elif params.dataset == 'BioSNAP':
             graphs[split_name] = {'triplets': triplets_mr[split_name], 'max_size': params.max_links, "polarity_mr": polarity_mr[split_name]}
     # Sample train and valid/test links
     for split_name, split in graphs.items():
@@ -74,25 +74,13 @@ class SubgraphDataset(Dataset):
         self.file_name = file_name
         triple_file = 'data/{}/relations_2hop.txt'.format(dataset)
         self.entity_type = np.loadtxt('data/{}/entity.txt'.format(dataset))
-        # if morgan_feat is None:
-        #     import pickle 
-        #     with open('data/{}/DB_molecular_feats.pkl'.format(dataset), 'rb') as f:
-        #         x = pickle.load(f, encoding='utf-8')
-        #     mfeat =  []
-        #     for y in x['Morgan_Features']:
-        #         mfeat.append(y)
-        #     self.morgan_feat = np.array(mfeat)
-        # else:
-        #     self.morgan_feat = morgan_feat
+
         if not ssp_graph:
-            #ssp_graph, triplets, entity2id, relation2id, id2entity, id2relation, rel = process_files_ddi(raw_data_paths, triple_file, included_relations)
-            if dataset == 'ddi':
+            if dataset == 'drugbank':
                 ssp_graph, triplets, entity2id, relation2id, id2entity, id2relation, rel = process_files_ddi(raw_data_paths, triple_file, included_relations)
             else:
                 ssp_graph, triplets, entity2id, relation2id, id2entity, id2relation, rel, triplets_mr, polarity_mr = process_files_decagon(raw_data_paths, triple_file, included_relations)
 
-
-            #adj_list, triplets, entity2id, relation2id, id2entity, id2relation, rel
             
             data_path =  'data/{}/relation2id.json'.format(dataset)
             #print(os.pwd)
@@ -120,7 +108,6 @@ class SubgraphDataset(Dataset):
         self.id2entity = id2entity
         self.id2relation = id2relation
 
-        #self.aug_num_rels += 1
 
         self.max_n_label = np.array([0, 0])
         with self.main_env.begin() as txn:
@@ -144,44 +131,10 @@ class SubgraphDataset(Dataset):
 
         logging.info(f"Max distance from sub : {self.max_n_label[0]}, Max distance from obj : {self.max_n_label[1]}")
 
-        # logging.info('=====================')
-        # logging.info(f"Subgraph size stats: \n Avg size {self.avg_subgraph_size}, \n Min size {self.min_subgraph_size}, \n Max size {self.max_subgraph_size}, \n Std {self.std_subgraph_size}")
-
-        # logging.info('=====================')
-        # logging.info(f"Enclosed nodes ratio stats: \n Avg size {self.avg_enc_ratio}, \n Min size {self.min_enc_ratio}, \n Max size {self.max_enc_ratio}, \n Std {self.std_enc_ratio}")
-
-        # logging.info('=====================')
-        # logging.info(f"# of pruned nodes stats: \n Avg size {self.avg_num_pruned_nodes}, \n Min size {self.min_num_pruned_nodes}, \n Max size {self.max_num_pruned_nodes}, \n Std {self.std_num_pruned_nodes}")
-
         with self.main_env.begin(db=self.db_pos) as txn:
             self.num_graphs_pos = int.from_bytes(txn.get('num_graphs'.encode()), byteorder='little')
-        # with self.main_env.begin(db=self.db_neg) as txn:
-        #     self.num_graphs_neg = int.from_bytes(txn.get('num_graphs'.encode()), byteorder='little')
-        # for i in range(10):
-        #     self.__getitem__(i
+
         lst = []
-        # for index in range(self.num_graphs_pos):
-        #     with self.main_env.begin(db=self.db_pos) as txn:
-        #         str_id = '{:08}'.format(index).encode('ascii')
-        #         nodes_pos, r_label_pos, g_label_pos, n_labels_pos = deserialize(txn.get(str_id)).values()
-                
-        #         n_labels_pos = np.array(n_labels_pos)
-        #         #print(nodes_pos, r_label_pos, g_label_pos, n_labels_pos)
-        #         # print({
-        #         #                     'nodes': list(map(int, list(nodes_pos))), 
-        #         #                     'r': r_label_pos, 
-        #         #                     'g': g_label_pos, 
-        #         #                     'n': n_labels_pos.tolist()
-        #         #                 })
-        #         lst.append(
-        #                         {
-        #                             'nodes': list(map(int, list(nodes_pos))), 
-        #                             'r': r_label_pos, 
-        #                             'g': g_label_pos, 
-        #                             'n': n_labels_pos.tolist()
-        #                         }
-        #                     )
-        #         #print(nodes_pos, r_label_pos,g_label_pos, n_labels_pos)
         def json_save(data, dataset_name):
             with open(dataset_name, 'w') as f:
                 f.write(json.dumps(data, indent = 4))
@@ -195,19 +148,8 @@ class SubgraphDataset(Dataset):
             #print(nodes_pos, r_label_pos, g_label_pos, n_labels_pos)
             #print(nodes_pos, r_label_pos, g_label_pos, n_labels_pos)
             subgraph_pos = self._prepare_subgraphs(nodes_pos, r_label_pos, n_labels_pos)
-        #return
-        # subgraphs_neg = []
-        # r_labels_neg = []
-        # g_labels_neg = []
-        # with self.main_env.begin(db=self.db_neg) as txn:
-        #     for i in range(self.num_neg_samples_per_link):
-        #         str_id = '{:08}'.format(index + i * (self.num_graphs_pos)).encode('ascii')
-        #         nodes_neg, r_label_neg, g_label_neg, n_labels_neg = deserialize(txn.get(str_id)).values()
-        #         subgraphs_neg.append(self._prepare_subgraphs(nodes_neg, r_label_neg, n_labels_neg))
-        #         r_labels_neg.append(r_label_neg)
-        #         g_labels_neg.append(g_label_neg)
 
-        return subgraph_pos, g_label_pos, r_label_pos#, subgraphs_neg, g_labels_neg, r_labels_neg
+        return subgraph_pos, g_label_pos, r_label_pos
 
     def __len__(self):
         return self.num_graphs_pos
@@ -217,46 +159,23 @@ class SubgraphDataset(Dataset):
         subgraph = dgl.DGLGraph(self.graph.subgraph(nodes))
         #print(subgraph, subgraph.nodes(), subgraph.ndata, subgraph.edges(), subgraph.edata)
         subgraph.edata['type'] = self.graph.edata['type'][self.graph.subgraph(nodes).parent_eid]
-        
-        #subgraph.edata['label'] = torch.tensor(r_label * np.ones(subgraph.edata['type'].shape), dtype=torch.long)
-        
+                
         subgraph.ndata['idx'] = torch.LongTensor(np.array(nodes))
         subgraph.ndata['ntype'] = torch.LongTensor(self.entity_type[nodes])
         subgraph.ndata['mask'] = torch.LongTensor(np.where(self.entity_type[nodes]==1, 1, 0))
         try:
             edges_btw_roots = subgraph.edge_id(0, 1)
             rel_link = np.nonzero(subgraph.edata['type'][edges_btw_roots] == r_label)
-            # r_label = self.aug_num_rels - 1
-            # if rel_link.squeeze().nelement() == 0:
-            #     subgraph.add_edge(0, 1)
-            #     subgraph.edata['type'][-1] = torch.tensor(r_label).type(torch.LongTensor)
-            #     subgraph.edata['label'][-1] = torch.tensor(r_label).type(torch.LongTensor)
-
-            # rel_link = np.nonzero(subgraph.edata['type'][edges_btw_roots] == r_label)
-            # if rel_link.squeeze().nelement() == 0:
-            #     subgraph.add_edge(0, 1)
-            #     subgraph.edata['type'][-1] = torch.tensor(r_label).type(torch.LongTensor)
-            #     subgraph.edata['label'][-1] = torch.tensor(r_label).type(torch.LongTensor)
-        #print(edges_btw_roots, rel_link)
         except AssertionError:
-            #print('error')
             pass
-            # subgraph.add_edge(0, 1)
-            # r_label = self.aug_num_rels - 1
-            # subgraph.edata['type'][-1] = torch.tensor(r_label).type(torch.LongTensor)
-            # subgraph.edata['label'][-1] = torch.tensor(r_label).type(torch.LongTensor)
 
-        # map the id read by GraIL to the entity IDs as registered by the KGE embeddings
         kge_nodes = [self.kge_entity2id[self.id2entity[n]] for n in nodes] if self.kge_entity2id else None
         n_feats = self.node_features[kge_nodes] if self.node_features is not None else None
         subgraph = self._prepare_features_new(subgraph, n_labels, n_feats)
-        #head_idx, tail_idx = nodes[int(h__)], nodes[int(t__)]
-        #print(head_idx, tail_idx)
         try:
             edges_btw_roots = subgraph.edge_id(0, 1)
             subgraph.remove_edges(edges_btw_roots)
         except AssertionError:
-            #print('error')
             pass
         return subgraph #, torch.LongTensor([head_idx, tail_idx])
 
@@ -277,11 +196,7 @@ class SubgraphDataset(Dataset):
         label_feats = np.zeros((n_nodes, self.max_n_label[0] + 1 + self.max_n_label[1] + 1))
         label_feats[np.arange(n_nodes), n_labels[:, 0]] = 1
         label_feats[np.arange(n_nodes), self.max_n_label[0] + 1 + n_labels[:, 1]] = 1
-        # label_feats = np.zeros((n_nodes, self.max_n_label[0] + 1 + self.max_n_label[1] + 1))
-        # label_feats[np.arange(n_nodes), 0] = 1
-        # label_feats[np.arange(n_nodes), self.max_n_label[0] + 1] = 1
         n_feats = np.concatenate((label_feats, n_feats), axis=1) if n_feats is not None else label_feats
-        #print(n_feats, n_nodes,subgraph.ndata)
         subgraph.ndata['feat'] = torch.FloatTensor(n_feats)
 
         head_id = np.argwhere([label[0] == 0 and label[1] == 1 for label in n_labels])
@@ -290,9 +205,7 @@ class SubgraphDataset(Dataset):
         n_ids[head_id] = 1  # head
         n_ids[tail_id] = 2  # tail
         subgraph.ndata['id'] = torch.FloatTensor(n_ids) 
-        # h__ = head_id[0][0] 
-        # t__ = tail_id[0][0]
 
-        self.n_feat_dim = n_feats.shape[1]  # Find cleaner way to do this -- i.e. set the n_feat_dim
+        self.n_feat_dim = n_feats.shape[1]  
         return subgraph#, h__, t__
 

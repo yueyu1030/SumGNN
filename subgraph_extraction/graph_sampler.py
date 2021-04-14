@@ -101,7 +101,7 @@ def links2subgraphs(A, graphs, params, max_label_value=None):
 
     for split_name, split in graphs.items():
         logging.info(f"Extracting enclosing subgraphs for positive links in {split_name} set")
-        if params.dataset == 'ddi2':
+        if params.dataset == 'BioSNAP':
             labels = np.array(split["polarity_mr"])
         else:
             labels = np.ones(len(split['pos']))
@@ -110,7 +110,7 @@ def links2subgraphs(A, graphs, params, max_label_value=None):
         extraction_helper(A, split['pos'], labels, split_env)
 
         logging.info(f"Extracting enclosing subgraphs for negative links in {split_name} set")
-        if params.dataset == 'ddi2':
+        if params.dataset == 'BioSNAP':
             labels = np.array(split["polarity_mr"])
         else:
             labels = np.ones(len(split['pos']))
