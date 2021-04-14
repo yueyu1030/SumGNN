@@ -1,8 +1,8 @@
 <h2 align="center">
 <p> SumGNN: Multi-typed Drug Interaction Prediction via Efficient Knowledge Graph Summarization</h2>
 
-This is the code for our paper ``SumGNN: Multi-typed Drug Interaction Prediction via Efficient Knowledge Graph Summarization'' (published in Bioinformatics'21).
-
+This is the code for our paper ``SumGNN: Multi-typed Drug Interaction Prediction via Efficient Knowledge Graph Summarization'' (published in Bioinformatics'21) [link](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab207).
+ 
 ## Install
 
 ```bash
