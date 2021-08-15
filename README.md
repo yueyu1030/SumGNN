@@ -36,6 +36,8 @@ We provide the dataset in the [data](data/) folder.
 | [TWOSIDES](data/BioSNAP/) | [This link](http://snap.stanford.edu/biodata/datasets/10018/10018-ChSe-Decagon.html)| A drug-drug interaction network betweeen 645 drugs with 46221 interactions.|
 | Hetionet | [This link](https://github.com/hetio/hetionet) | The knowledge graph containing 33,765  nodes  out  of  11  types  (e.g.,  gene,  disease,  pathway,molecular function and etc.) with 1,690,693 edges from 23 relation types after preprocessing (To ensure **no information leakage**, we remove all the overlapping edges  between  HetioNet  and  the  dataset).
 
+We provide the mapping file between ids in our pre-processed data and their original name/drugbank id as well as a copy of hetionet data and their mapping file on [this link](https://drive.google.com/file/d/1C3ZF77QvdzI3eL9sjLkBr3aytzET4JGj/view?usp=sharing).
+
 ## Knowledge Graph Embedding
 We train the knowledge graph embedding based on the framework in [OpenKE](https://github.com/thunlp/OpenKE). 
 
