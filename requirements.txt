@@ -3,4 +3,9 @@ lmdb==0.98
 networkx==2.4
 scikit-learn==0.22.1
 tqdm==4.43.0
-torch==1.2.0
+torch==1.6.0
+scipy
+dgl
+requests
+tqdm
+sklearn
